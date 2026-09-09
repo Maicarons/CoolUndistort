@@ -3,7 +3,7 @@ name = "coolundistort-infer"
 version = "0.1.0"
 edition = "2021"
 license = "AGPL-3.0-or-later"
-description = "Rust inference core: fisheye baseline + TPS + checkpoint stub"
+description = "Rust inference core: calibration + TPS + rotation + prompts + ONNX hook"
 
 [dependencies]
 image = "0.25"

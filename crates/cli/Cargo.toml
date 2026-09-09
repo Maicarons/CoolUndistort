@@ -3,7 +3,7 @@ name = "coolundistort-cli"
 version = "0.1.0"
 edition = "2021"
 license = "AGPL-3.0-or-later"
-description = "CoolUndistort CLI: file in, file out, pure Rust"
+description = "CoolUndistort CLI: calibration/batch/eval, pure Rust"
 
 [[bin]]
 name = "coolundistort"

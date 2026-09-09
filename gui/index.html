@@ -8,9 +8,9 @@
   </head>
   <body>
     <main class="app">
-      <h1>CoolUndistort</h1>
+      <h1>CoolUndistort <small>纯 Rust 本地推理</small></h1>
       <section class="controls">
-        <input id="file" type="file" accept="image/*" />
+        <input id="file" type="file" accept="image/*" multiple />
         <select id="task">
           <option value="t1">T1 人像校正</option>
           <option value="t2" selected>T2 广角整形</option>
@@ -19,18 +19,43 @@
         </select>
         <select id="mode">
           <option value="fisheye" selected>除法模型基线</option>
-          <option value="tps">RP-TPS (P1)</option>
-          <option value="checkpoint">UniRect-lite 权重 (P1)</option>
+          <option value="tps">RP-TPS</option>
+          <option value="checkpoint">UniRect-lite 权重</option>
         </select>
-        <label>λ <input id="lambda" type="number" step="0.05" value="0.35" style="width: 5em" /></label>
         <button id="run">去畸变</button>
-        <span id="status">纯 Rust 本地推理，无需后端服务</span>
+        <button id="save">保存结果</button>
+        <span id="status">就绪</span>
       </section>
-      <section class="views">
-        <figure><figcaption>原图</figcaption><img id="before" alt="before" /></figure>
-        <figure><figcaption>结果</figcaption><img id="after" alt="after" /></figure>
+      <section class="params">
+        <details open>
+          <summary>标定参数</summary>
+          <label>λ <input id="lambda" type="number" step="0.05" value="0.35" /></label>
+          <label>calib.json <input id="calib" type="file" accept=".json" /></label>
+          <label>T4 倾角° <input id="angle" type="number" step="0.5" value="0" /></label>
+        </details>
+        <details>
+          <summary>TPS / 权重（P1）</summary>
+          <label>deltas.json <input id="deltas" type="file" accept=".json" /></label>
+          <label>grid <input id="grid" value="10x12" /></label>
+          <label>model.onnx 路径 <input id="onnx" placeholder="weights/unirect_lite_t3.onnx" /></label>
+        </details>
       </section>
-      <footer>AGPL-3.0-or-later · <span>源码见仓库 LICENSE</span></footer>
+      <section class="compare">
+        <div class="imgwrap">
+          <img id="before" alt="before" />
+          <img id="after" alt="after" />
+          <input id="slider" type="range" min="0" max="100" value="50" />
+        </div>
+        <div class="legend"><span>◀ 原图</span><span>结果 ▶</span></div>
+      </section>
+      <section class="batch">
+        <h2>批量队列 <button id="clear">清空</button></h2>
+        <ul id="queue"></ul>
+      </section>
+      <footer>
+        AGPL-3.0-or-later · 源码见仓库 LICENSE ·
+        <a href="https://github.com/Maicarons/CoolUndistort" target="_blank">GitHub</a>
+      </footer>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

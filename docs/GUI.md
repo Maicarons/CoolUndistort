@@ -1,23 +1,17 @@
 # GUI 文档（Tauri）
 
 > 技术选型：Tauri v2（Rust 后端 + Vite+TS 前端）。**推理全部在 Rust 后端**，
-> 经 `crates/infer` 的 `undistort` 入口；前端只做上传/展示，经 `invoke("undistort_image")` 调用。
+> 经 `crates/infer` 的 `undistort_full` 入口；前端只做上传/展示，经 `invoke("undistort_image")` 调用。
 > 无 Python 服务、无 HTTP 后端。
 
 ## 1. 目录
 
 ```
 gui/
-├── package.json            # 前端工程（vite + @tauri-apps/cli）
-├── vite.config.ts
-├── index.html              # 任务下拉 T1-T4 / mode / λ 输入 / 前后对比
-├── src/
-│   ├── main.ts             # 上传 / invoke("undistort_image") / base64 回显
-│   └── styles.css
-└── src-tauri/
-    ├── Cargo.toml          # 依赖 coolundistort-infer（path 引用 workspace 外，保持与 CLI 同一核）
-    ├── tauri.conf.json
-    └── src/main.rs         # undistort_image command：解码 → undistort → 编码 PNG → base64
+├── package.json / vite.config.ts / index.html
+├── src/main.ts    # 多选批量 / invoke / 对比滑块 / 保存
+├── src/styles.css # 对比叠加样式
+└── src-tauri/src/main.rs  # undistort_image：标定/TPS/ONNX/倾角全参数透传
 ```
 
 ## 2. 运行（无需 Python）
@@ -28,14 +22,16 @@ npm install
 npm run tauri dev
 ```
 
-调用契约：`invoke("undistort_image", { imageBytes: number[], task: "t1"|"t2"|"t3"|"t4", mode: "fisheye"|"tps"|"checkpoint", lambda: number })`
-→ 返回 base64 PNG。`tps`/`checkpoint` 在 P1 权重就绪前返回 `NeedsWeights` 错误，前端直接展示。
+调用契约：`invoke("undistort_image", { imageBytes, task, mode, lambda, calibJson, angleDeg, onnxPath, tpsDeltasJson, tpsGrid })`
+→ 返回 base64 PNG。`tps` 无 deltas / `checkpoint` 无 onnx 文件时返回明确错误，前端直接展示。
 
-## 3. 功能清单
+## 3. 功能
 
-- P0：图片上传 + 预览、任务下拉（T1–T4）、mode 选择、λ 输入、Rust 本地推理、前后对比展示、关于页（AGPL 文本 + 源码链接）。
-- P1：prompt 可视化叠加、批量处理（复用同一 `undistort` 入口循环调）、K/D 标定面板（参数进 `CameraParams`）。
-- P2：ONNX 轻量模型内置（仍在 Rust 内加载推理，不引入 Python 运行时）。
+- 多选批量队列（点选切换首张，逐张推理，状态栏报进度）。
+- 前后对比滑块（after 图层 `clip-path` 跟随 slider）。
+- 标定面板：λ 快调 / calib.json 文件载入（identity/division/brown-conrady）/ T4 倾角。
+- TPS / 权重：deltas.json + grid 输入、model.onnx 路径（权重就绪即用）。
+- 保存结果 PNG；footer 关于（AGPL + GitHub 源码链接）。
 
 ## 4. 打包
 

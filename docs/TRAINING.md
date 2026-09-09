@@ -2,7 +2,7 @@
 
 > 对应论文 arXiv:2512.18718。目标：在 8G -ish 显卡上复现 four-by-one，再考虑 four-in-one。
 > 本目录只管训练出权重；**一切推理（含基线/评测/部署）都走 `crates/infer` + `crates/cli`**，
-> 训练产物经 ONNX 导出给 Rust 加载（P1）。
+> 训练产物经 `scripts/export_onnx.py` 导出给 Rust 加载。
 
 ## 1. 数据
 
@@ -13,24 +13,21 @@
 - T3 拼接整形：Nie et al. CVPR22。
 - T4 旋转校正：Nie et al. TIP23（ImageNet 派生）。
 
-目录约定（已 ignore，大文件勿提交）：
-
-```
-data/raw/{t1,t2,t3,t4}/        # 原始下载
-data/processed/{t1,t2,t3,t4}/  # 统一结构：img/ + prompt/ + meta.json
+```powershell
+python scripts/prepare_data.py --task t3 --src raw/t3 --dst data/processed/t3
+# T1 有人脸 mask：加 --faces faces/ ；输出 img/ + prompt/ + target(可选) + meta.json
 ```
 
-MOWA 仓库自带六任务清洗脚本，数据结构可直接参考对齐（MOWA 权重仅本地评测，不分发）。
+prompt 烘焙规则（与 Rust `prompt.rs` 对齐）：T2/T3 用 `border_mask`（暗边→0），T4 全 1，T1 用人脸 mask。
 
-## 2. 模型（P1 实现顺序）
+## 2. 模型
 
-1. `model/deformation.py` — RP-TPS：基础控制点 12×10，C0/C1 两步残差，**两次采样都从原图采**（防插值累积）。TPS 求解参考 RecRecNet / CoupledTPS 开源实现。
-2. `model/prompts.py` — T1 人脸 mask / T2-T3 边界 mask / T4 全白图；prompt 参与 `Lb`。
-3. `model/restoration.py` — RMB×2 起步（论文×4，>300M 参数，8G 先减半），首层 partial conv。
-4. 先训 DM、冻结后再联合微调（论文是同时训，分阶段更稳）。
-
-Loss（论文 Eq.9 起步）：`L = Σγj(La + α1Lb + α2Lp + α3Lg)`，
-`γ=0.9, α1=1e-2, α2=1.0, α3=1e-2`；T1/T4 全图 La，T2/T3 边界加权；RM 加 perceptual。
+- `model/deformation.py` — RP-TPS 闭式解（double 精度 `torch.linalg.solve`），C0/C1 两步残差，
+  **两次采样都从原图采**，head 零初始化，输出钳制 ±1.5。与 Rust `tps.rs` 同一数学。
+- `model/restoration.py` — RMB×2 起步（论文×4，8G 先减半），首层拼 prompt。
+- Loss（论文 Eq.9）：`L = La + a1*Lb + a2*0.01*Lp + a3*Lg`，
+  `a1=1e-2, a2=1.0, a3=1e-2`；Lb 用 prompt 边缘加权，Lp 用二阶平滑 surrogate。
+- 先训 DM、冻结后再联合微调（论文是同时训，分阶段更稳）。
 
 ## 3. 8G 训练配置（configs/unirect_lite.yaml）
 
@@ -41,18 +38,21 @@ Loss（论文 Eq.9 起步）：`L = Σγj(La + α1Lb + α2Lp + α3Lg)`，
 ```bash
 # WSL2
 python -m coolundistort.train --config configs/unirect_lite.yaml
+# 断点续训（Kaggle 9h 接力）
+python -m coolundistort.train --config configs/unirect_lite.yaml --resume checkpoints/unirect_lite_t3/epoch_010.pt
 ```
+
+每 epoch 存 `epoch_NNN.pt`（含 optim，可续训），最优存 `best.pt`，TensorBoard 日志在 `ckpt/logs/`。
 
 ## 4. Kaggle 溢出指南
 
-- 选 **T4 GPU**（P100 sm60 跑不了 mamba-ssm；T4 也可能要降级。
-  先 `python -c "import mamba_ssm"` 验证，不行就用 CNN 对照分支）。
-- 数据集挂 Kaggle Dataset，`checkpoints/` 每 epoch 存，单 session ≤9h，靠断点续训接力。
+- 选 **T4 GPU**（P100 sm60 跑不了 mamba-ssm；先 `python -c "import mamba_ssm"` 验证）。
+- 数据集挂 Kaggle Dataset，`checkpoints/` 每 epoch 存，单 session ≤9h，靠 `--resume` 接力。
 - 30h/周只花在两种任务：本地跑不动的大实验、Linux 可复现验证。
 
-## 5. 评测
+## 5. 评测与导出
 
-PSNR/SSIM/FID/LPIPS；T1 用 ShapeACC/LineACC（像素 GT 不存在）。
-注意 T3 数据集色调不一致（SSIM 虚低）与 T2 GT 模糊（感知指标虚低），以相对值为准。
-`scripts/eval.py` 驱动 Rust CLI（`cargo run -p coolundistort-cli -- --eval`）输出 JSON 到 `results/`；
-Python 侧不做推理实现。
+- `python scripts/eval.py --root data/processed/t3` 驱动 Rust CLI（PSNR+SSIM）输出到 `results/`。
+  T1 用 ShapeACC/LineACC；T3 色调不一致（SSIM 虚低）与 T2 GT 模糊（感知指标虚低）以相对值为准。
+- `python scripts/export_onnx.py --ckpt checkpoints/.../best.pt --out weights/...onnx`，
+  再用 `coolundistort --mode checkpoint --onnx weights/...onnx` 在 Rust 内验证。

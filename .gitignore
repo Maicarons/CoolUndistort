@@ -12,6 +12,7 @@ data/processed/
 checkpoints/
 runs/
 results/
+weights/
 # Node / Tauri / Rust
 node_modules/
 /target/

@@ -1,34 +1,110 @@
-// CoolUndistort GUI: upload -> invoke undistort_image (Rust) -> before/after view.
+// CoolUndistort GUI: upload(+batch) -> invoke undistort_image (Rust) -> compare slider.
 import { invoke } from "@tauri-apps/api/core";
 
 const el = (id: string) => document.getElementById(id) as HTMLElement;
 const before = el("before") as HTMLImageElement;
 const after = el("after") as HTMLImageElement;
 const statusEl = el("status");
+const queueEl = el("queue") as HTMLUListElement;
+const slider = el("slider") as HTMLInputElement;
 
-let file: File | null = null;
+let files: File[] = [];
+let calibText = "";
+let deltasText = "";
+let lastResultUrl: string | null = null;
+
+slider.addEventListener("input", () => {
+  after.style.clipPath = `inset(0 0 0 ${slider.value}%)`;
+});
+after.style.clipPath = "inset(0 0 0 50%)";
+
+async function readText(f: File): Promise<string> {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result ?? ""));
+    r.onerror = () => rej(r.error);
+    r.readAsText(f);
+  });
+}
+
+function renderQueue() {
+  queueEl.innerHTML = "";
+  files.forEach((f, i) => {
+    const li = document.createElement("li");
+    li.textContent = `${i + 1}. ${f.name}`;
+    li.onclick = () => {
+      before.src = URL.createObjectURL(f);
+      files = [f, ...files.filter((_, j) => j !== i)];
+      renderQueue();
+    };
+    queueEl.appendChild(li);
+  });
+}
+
 (el("file") as HTMLInputElement).addEventListener("change", (e) => {
-  file = (e.target as HTMLInputElement).files?.[0] ?? null;
-  if (file) before.src = URL.createObjectURL(file);
+  const list = Array.from((e.target as HTMLInputElement).files ?? []);
+  if (!list.length) return;
+  files = [...files, ...list];
+  before.src = URL.createObjectURL(list[0]);
+  renderQueue();
+});
+(el("clear") as HTMLButtonElement).addEventListener("click", () => {
+  files = [];
+  renderQueue();
+});
+(el("calib") as HTMLInputElement).addEventListener("change", async (e) => {
+  const f = (e.target as HTMLInputElement).files?.[0];
+  calibText = f ? await readText(f) : "";
+  statusEl.textContent = f ? `已载入标定 ${f.name}` : "已清除标定";
+});
+(el("deltas") as HTMLInputElement).addEventListener("change", async (e) => {
+  const f = (e.target as HTMLInputElement).files?.[0];
+  deltasText = f ? await readText(f) : "";
+  statusEl.textContent = f ? `已载入 TPS deltas ${f.name}` : "已清除 deltas";
 });
 
-document.getElementById("run")?.addEventListener("click", async () => {
-  if (!file) {
-    statusEl.textContent = "请先选择图片";
+async function runOne(f: File): Promise<void> {
+  const buf = new Uint8Array(await f.arrayBuffer());
+  const png: string = await invoke("undistort_image", {
+    imageBytes: Array.from(buf),
+    task: (el("task") as HTMLSelectElement).value,
+    mode: (el("mode") as HTMLSelectElement).value,
+    lambda: parseFloat((el("lambda") as HTMLInputElement).value) || 0.35,
+    calibJson: calibText,
+    angleDeg: parseFloat((el("angle") as HTMLInputElement).value) || 0,
+    onnxPath: (el("onnx") as HTMLInputElement).value,
+    tpsDeltasJson: deltasText,
+    tpsGrid: (el("grid") as HTMLInputElement).value,
+  });
+  lastResultUrl = `data:image/png;base64,${png}`;
+  after.src = lastResultUrl;
+}
+
+(el("run") as HTMLButtonElement).addEventListener("click", async () => {
+  if (!files.length) {
+    statusEl.textContent = "请先选择图片（可多选批量）";
     return;
   }
-  statusEl.textContent = "推理中...";
-  try {
-    const buf = new Uint8Array(await file.arrayBuffer());
-    const png: string = await invoke("undistort_image", {
-      imageBytes: Array.from(buf),
-      task: (el("task") as HTMLSelectElement).value,
-      mode: (el("mode") as HTMLSelectElement).value,
-      lambda: parseFloat((el("lambda") as HTMLInputElement).value) || 0.35,
-    });
-    after.src = `data:image/png;base64,${png}`;
-    statusEl.textContent = "完成（Rust 本地推理）";
-  } catch (err) {
-    statusEl.textContent = `失败: ${String(err)}`;
+  for (let i = 0; i < files.length; i++) {
+    statusEl.textContent = `推理中 ${i + 1}/${files.length} ...`;
+    try {
+      before.src = URL.createObjectURL(files[i]);
+      await runOne(files[i]);
+    } catch (err) {
+      statusEl.textContent = `失败 [${files[i].name}]: ${String(err)}`;
+      return;
+    }
   }
+  statusEl.textContent = `完成 ${files.length} 张（Rust 本地推理）`;
+});
+
+(el("save") as HTMLButtonElement).addEventListener("click", () => {
+  if (!lastResultUrl) {
+    statusEl.textContent = "暂无结果可保存";
+    return;
+  }
+  const a = document.createElement("a");
+  a.href = lastResultUrl;
+  a.download = "undistorted.png";
+  a.click();
 });

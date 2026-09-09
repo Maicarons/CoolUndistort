@@ -6,40 +6,53 @@
 - 开发流程见 [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)
 - 训练见 [docs/TRAINING.md](./docs/TRAINING.md)，GUI 见 [docs/GUI.md](./docs/GUI.md)
 
+## 功能（v1.0 完成态）
+
+- **Rust 推理核**（`crates/infer`，唯一推理实现）：标定模型（identity/division/Brown-Conrady + JSON）、
+  TPS 闭式解 warp、T4 旋转校正、T1–T4 任务行为、边界 mask prompt、ONNX/权重钩子。
+- **CLI**（`crates/cli`）：单张/批量目录、`--calib/--lambda/--angle/--deltas/--grid/--onnx`、`--eval` 输出 PSNR+SSIM。
+- **Python 训练**（`coolundistort/`）：RP-TPS 闭式解 + 两步残差、C0/C1 零初始化、完整 Loss（La/Lb/Lp/Lg）、
+  prompt 烘焙、train/val、AMP、断点续训、TensorBoard；`export_onnx.py` 供 Rust 加载。
+- **Tauri GUI**：多选批量、前后对比滑块、标定面板（λ/calib.json/倾角）、TPS deltas + ONNX 路径、保存结果、关于页。
+- **标定**：`scripts/calibrate_opencv.py`（棋盘格 → calib.json）。
+
 ## 语言边界
 
-- **Rust（推理全部）**：`crates/infer`（推理核：除法模型基线 + prompt + RP-TPS 骨架）、
-  `crates/cli`（`coolundistort` 命令行）、`gui/src-tauri`（Tauri 后端直调推理核）。
-- **Python（仅训练）**：`coolundistort/`（UniRect-lite 模型 + 训练入口 + 数据集 + 损失）。
-  不提供推理/服务入口；评测脚本 `scripts/eval.py` 只是驱动 Rust CLI 算分。
+- **Rust（推理全部）**：`crates/infer`、`crates/cli`、`gui/src-tauri`。
+- **Python（仅训练 + 数据/标定/导出工具）**：`coolundistort/`、`scripts/`。不提供推理实现。
 
 ## 仓库结构
 
 ```
 CoolUndistort/
-├── LICENSE                  # AGPL-3.0-or-later
-├── Cargo.toml                 # Rust workspace (crates/*)
+├── LICENSE / Cargo.toml / pyproject.toml
 ├── crates/
-│   ├── infer/                 # 推理核：fisheye / prompt / tps（唯一推理实现）
-│   └── cli/                   # coolundistort 二进制：--input/--output/--task/--mode/--eval
-├── pyproject.toml             # Python 训练包 (coolundistort-train)
-├── coolundistort/             # 训练专用：model/ train.py datasets.py losses.py
-├── configs/                   # 训练配置 (base / unirect_lite)
-├── scripts/                   # prepare_data.py（训练数据）/ eval.py（调 Rust CLI 评测）
-├── gui/                       # Tauri 应用：前端 invoke → Rust 后端推理
-├── tests/                     # pytest（训练前向冒烟）
-└── docs/                      # 文档
+│   ├── infer/src/   # lib/calibration/fisheye/tps/rotation/prompt/sampler/onnx
+│   └── cli/src/     # coolundistort 二进制
+├── coolundistort/   # 训练专用：model/ train.py datasets.py losses.py
+├── configs/         # base / unirect_lite
+├── scripts/         # prepare_data / calibrate_opencv / eval / export_onnx
+├── gui/             # Tauri 应用：前端 invoke → Rust 后端推理
+├── tests/           # pytest（训练前向冒烟）
+└── docs/
 ```
 
 ## 快速开始
 
 ```powershell
 # 推理（纯 Rust，无需 Python）
-cargo run -p coolundistort-cli -- --input in.jpg --output out.png --task t2 --mode fisheye
+cargo run -p coolundistort-cli -- --input in.jpg --output out.png --task t2
+cargo run -p coolundistort-cli -- --batch in_dir --out-dir out_dir --task t3 --eval
+
+# 标定自己的镜头
+python scripts/calibrate_opencv.py --images calib/*.jpg --pattern 9x6 --out calib.json
+cargo run -p coolundistort-cli -- --input in.jpg --output out.png --calib calib.json
 
 # 训练（Python，建议 WSL2；mamba-ssm 仅支持 Linux）
 pip install -e ".[train]"
+python scripts/prepare_data.py --task t3 --src raw/t3 --dst data/processed/t3
 python -m coolundistort.train --config configs/unirect_lite.yaml
+# 断点续训：python -m coolundistort.train --config ... --resume checkpoints/.../epoch_010.pt
 
 # GUI（前端直调 Rust，无后端服务）
 cd gui; npm install; npm run tauri dev
