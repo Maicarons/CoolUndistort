@@ -1,0 +1,7 @@
+:root { color-scheme: dark light; }
+body { margin: 0; font-family: system-ui, sans-serif; }
+.app { max-width: 1100px; margin: 0 auto; padding: 24px; }
+.controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.views { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.views img { width: 100%; border: 1px solid #888; min-height: 240px; object-fit: contain; background: #111; }
+footer { margin-top: 16px; color: #888; font-size: 12px; }

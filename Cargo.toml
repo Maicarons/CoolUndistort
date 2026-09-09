@@ -1,0 +1,4 @@
+[workspace]
+members = ["crates/infer", "crates/cli"]
+exclude = ["gui/src-tauri"]
+resolver = "2"

@@ -1,0 +1,16 @@
+data:
+  root: "data/processed/t3"
+  task: "t3"
+  size: 256
+model:
+  grid_h: 10
+  grid_w: 12
+  rm_blocks: 4
+train:
+  batch_size: 4
+  accum: 1
+  epochs: 200
+  lr: 0.0001
+  weight_decay: 0.00001
+  amp: true
+  ckpt_dir: "checkpoints/unirect_base"

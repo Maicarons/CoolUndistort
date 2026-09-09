@@ -1,0 +1,29 @@
+[project]
+name = "coolundistort"
+version = "0.1.0"
+description = "Unified image undistortion & rectangling (UniRect-lite): training only; inference is pure Rust"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "AGPL-3.0-or-later" }
+dependencies = [
+  "torch>=2.2",
+  "torchvision>=0.17",
+  "opencv-python>=4.8",
+  "numpy>=1.24",
+  "pyyaml>=6.0",
+  "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+train = ["mamba-ssm>=2.0", "tensorboard>=2.15"]
+test = ["pytest>=8.0"]
+
+[project.scripts]
+coolundistort-train = "coolundistort.train:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["coolundistort*"]

@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+# Data & checkpoints (large, keep local)
+data/raw/
+data/processed/
+checkpoints/
+runs/
+results/
+# Node / Tauri / Rust
+node_modules/
+/target/
+gui/dist/
+gui/src-tauri/target/
+gui/src-tauri/WixTools/
+*.node
+*.app
+*.dmg
+*.msi
+*.AppImage
+# OS / IDE / local tooling
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.commandcode/
+.mimosa/
+.pytest_cache/
+# Env
+.env
+*.log
+gui/src-tauri/gen/
