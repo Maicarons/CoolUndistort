@@ -38,6 +38,8 @@ impl Task {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InferMode {
+    /// Blind: estimate lambda with the bundled ONNX model, then undistort.
+    Auto,
     Fisheye,
     Tps,
     Checkpoint,
@@ -46,6 +48,7 @@ pub enum InferMode {
 impl InferMode {
     pub fn parse(s: &str) -> Result<Self, InferError> {
         match s.to_lowercase().as_str() {
+            "auto" => Ok(Self::Auto),
             "fisheye" => Ok(Self::Fisheye),
             "tps" => Ok(Self::Tps),
             "checkpoint" => Ok(Self::Checkpoint),
@@ -121,6 +124,10 @@ pub fn undistort_full(
     params: &InferParams,
 ) -> Result<RgbImage, InferError> {
     match mode {
+        InferMode::Auto => {
+            let (out, _) = onnx::run_auto(img, params.onnx_path.as_deref())?;
+            Ok(out)
+        }
         InferMode::Fisheye => {
             // Task-aware defaults: T1 faces need a gentler warp, T4 is
             // rotation-only (identity geometry + rotation fix).

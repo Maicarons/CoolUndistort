@@ -6,14 +6,17 @@
 - 开发流程见 [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)
 - 训练见 [docs/TRAINING.md](./docs/TRAINING.md)，GUI 见 [docs/GUI.md](./docs/GUI.md)
 
-## 功能（v1.0 完成态）
+## 功能（v1.1 真实可用）
 
+- **自动盲去畸变（默认）**：`--mode auto` 单图盲估计除法模型 λ（内置 `weights/autolambda.onnx`，
+  tract 纯 Rust 加载），CLI 侧 6 点 sweep MAE **0.0147**，开箱即用，无需标定。
 - **Rust 推理核**（`crates/infer`，唯一推理实现）：标定模型（identity/division/Brown-Conrady + JSON）、
-  TPS 闭式解 warp、T4 旋转校正、T1–T4 任务行为、边界 mask prompt、ONNX/权重钩子。
-- **CLI**（`crates/cli`）：单张/批量目录、`--calib/--lambda/--angle/--deltas/--grid/--onnx`、`--eval` 输出 PSNR+SSIM。
-- **Python 训练**（`coolundistort/`）：RP-TPS 闭式解 + 两步残差、C0/C1 零初始化、完整 Loss（La/Lb/Lp/Lg）、
-  prompt 烘焙、train/val、AMP、断点续训、TensorBoard；`export_onnx.py` 供 Rust 加载。
-- **Tauri GUI**：多选批量、前后对比滑块、标定面板（λ/calib.json/倾角）、TPS deltas + ONNX 路径、保存结果、关于页。
+  TPS 闭式解 warp、T4 旋转校正、T1–T4 任务行为、边界 mask prompt、ONNX 真实加载。
+- **CLI**（`crates/cli`，默认 auto）：单张/批量目录、`--calib/--lambda/--angle/--deltas/--grid/--onnx`、
+  `--eval` 输出 PSNR+SSIM+lambda_est。
+- **Python 训练**：AutoLambda（`scripts/train_autolambda.py --multiscale`，合成结构光数据，
+  多尺度训练消除 serving skew）+ UniRect-lite（RP-TPS + Loss + prompt 烘焙 + 断点续训 + ONNX 导出）。
+- **Tauri GUI**：默认 auto（显示估计 λ）、多选批量、前后对比滑块、标定面板、TPS/ONNX、保存结果。
 - **标定**：`scripts/calibrate_opencv.py`（棋盘格 → calib.json）。
 
 ## 语言边界

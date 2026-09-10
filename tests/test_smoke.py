@@ -4,6 +4,7 @@ import numpy as np
 import torch
 
 from coolundistort.losses import DeformationLoss
+from coolundistort.model.autolambda import LAMBDA_MAX, AutoLambdaNet, distort_division, make_sample
 from coolundistort.model.deformation import tps_parameters
 from coolundistort.model.prompts import border_mask, make_prompt
 from coolundistort.model.unirect import UniRectLite
@@ -45,3 +46,24 @@ def test_loss_terms():
     prompt = torch.ones(1, 1, 16, 16)
     loss = fn(pred, target, prompt)
     assert torch.isfinite(loss)
+
+
+def test_autolambda_forward_and_range():
+    import numpy as np
+
+    model = AutoLambdaNet().eval()
+    with torch.no_grad():
+        out = model(torch.rand(2, 1, 128, 128))
+    assert out.shape == (2,)
+    assert bool(((out >= 0) & (out <= LAMBDA_MAX)).all())
+
+
+def test_autolambda_synth_sample():
+    import numpy as np
+
+    rng = np.random.default_rng(0)
+    img, lam = make_sample(rng, 64)
+    assert img.shape == (64, 64)
+    assert 0.0 <= lam <= LAMBDA_MAX
+    back = distort_division((img * 255).astype(np.uint8), 0.0)
+    assert back.shape == (64, 64)

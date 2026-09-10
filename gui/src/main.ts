@@ -12,6 +12,7 @@ let files: File[] = [];
 let calibText = "";
 let deltasText = "";
 let lastResultUrl: string | null = null;
+let lastLambda: number | null = null;
 
 slider.addEventListener("input", () => {
   after.style.clipPath = `inset(0 0 0 ${slider.value}%)`;
@@ -65,10 +66,21 @@ function renderQueue() {
 
 async function runOne(f: File): Promise<void> {
   const buf = new Uint8Array(await f.arrayBuffer());
+  const mode = (el("mode") as HTMLSelectElement).value;
+  if (mode === "auto") {
+    const res = (await invoke("undistort_auto", {
+      imageBytes: Array.from(buf),
+      onnxPath: (el("onnx") as HTMLInputElement).value,
+    })) as { image: string; lambda: number };
+    lastResultUrl = `data:image/png;base64,${res.image}`;
+    after.src = lastResultUrl;
+    lastLambda = res.lambda;
+    return;
+  }
   const png: string = await invoke("undistort_image", {
     imageBytes: Array.from(buf),
     task: (el("task") as HTMLSelectElement).value,
-    mode: (el("mode") as HTMLSelectElement).value,
+    mode,
     lambda: parseFloat((el("lambda") as HTMLInputElement).value) || 0.35,
     calibJson: calibText,
     angleDeg: parseFloat((el("angle") as HTMLInputElement).value) || 0,
@@ -78,6 +90,7 @@ async function runOne(f: File): Promise<void> {
   });
   lastResultUrl = `data:image/png;base64,${png}`;
   after.src = lastResultUrl;
+  lastLambda = null;
 }
 
 (el("run") as HTMLButtonElement).addEventListener("click", async () => {
@@ -95,7 +108,8 @@ async function runOne(f: File): Promise<void> {
       return;
     }
   }
-  statusEl.textContent = `完成 ${files.length} 张（Rust 本地推理）`;
+  const suffix = lastLambda !== null ? `，λ≈${lastLambda.toFixed(4)}` : "";
+  statusEl.textContent = `完成 ${files.length} 张（Rust 本地推理${suffix}）`;
 });
 
 (el("save") as HTMLButtonElement).addEventListener("click", () => {

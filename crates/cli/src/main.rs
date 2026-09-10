@@ -1,12 +1,12 @@
 // CoolUndistort CLI (AGPL-3.0-or-later): file in, file out, pure Rust.
 //
-//   Single : coolundistort --input in.jpg --output out.png --task t2 --mode fisheye
-//   Calib  : ... --calib calib.json            (identity/division/brown-conrady)
+//   Single : coolundistort --input in.jpg --output out.png [--mode auto]   (default: blind, bundled weights)
+//   Calib  : ... --mode fisheye [--calib calib.json | --lambda F]
 //   T4     : ... --task t4 --angle 2.5         (tilt present in the input)
 //   TPS    : ... --mode tps --deltas d.json [--grid 10x12]
-//   Weights: ... --mode checkpoint --onnx model.onnx   (P1)
+//   Weights: ... --mode checkpoint --onnx model.onnx
 //   Batch  : coolundistort --batch in_dir --out-dir out_dir [same flags]
-//   Metrics: add --eval -> writes JSON {psnr_self, ssim_self} instead of image
+//   Metrics: add --eval -> writes JSON {psnr_self, ssim_self, lambda_est} instead of image
 
 use std::path::{Path, PathBuf};
 
@@ -15,7 +15,7 @@ use image::RgbImage;
 
 fn usage() -> ! {
     eprintln!(
-        "usage:\n  coolundistort --input <img> --output <img|json> [--task t1|t2|t3|t4] [--mode fisheye|tps|checkpoint]\n                    [--calib calib.json | --lambda F] [--angle DEG] [--deltas d.json --grid HxW] [--onnx m.onnx] [--eval]\n  coolundistort --batch <in_dir> --out-dir <out_dir> [same flags]"
+        "usage:\n  coolundistort --input <img> --output <img|json> [--task t1|t2|t3|t4] [--mode auto|fisheye|tps|checkpoint]\n                    [--calib calib.json | --lambda F] [--angle DEG] [--deltas d.json --grid HxW] [--onnx m.onnx] [--eval]\n  coolundistort --batch <in_dir> --out-dir <out_dir> [same flags]"
     );
     std::process::exit(2);
 }
@@ -100,22 +100,34 @@ fn psnr(a: &RgbImage, b: &RgbImage) -> f64 {
 
 fn run_one(input: &Path, output: &Path, task: Task, mode: InferMode, params: &InferParams, eval: bool) {
     let img = image::open(input).unwrap_or_else(|e| fail(format!("cannot read {}: {e}", input.display()))).to_rgb8();
-    let out = undistort_full(&img, task, mode, params).unwrap_or_else(|e| {
-        if let InferError::NeedsWeights(_) = e {
-            fail(format!("{e}"));
-        }
-        fail(e.to_string())
-    });
+    // Auto mode also reports the estimated lambda.
+    let (out, lambda_est) = if mode == InferMode::Auto {
+        coolundistort_infer::onnx::run_auto(&img, params.onnx_path.as_deref())
+            .unwrap_or_else(|e| fail(e.to_string()))
+    } else {
+        let out = undistort_full(&img, task, mode, params).unwrap_or_else(|e| {
+            if let InferError::NeedsWeights(_) = e {
+                fail(format!("{e}"));
+            }
+            fail(e.to_string())
+        });
+        (out, f32::NAN)
+    };
     if eval {
         let m = serde_json::json!({
             "mode": format!("{mode:?}"), "task": format!("{task:?}"),
             "psnr_self": psnr(&img, &out), "ssim_self": ssim(&img, &out),
+            "lambda_est": if lambda_est.is_finite() { serde_json::json!(lambda_est) } else { serde_json::Value::Null },
         });
         std::fs::write(output, serde_json::to_string_pretty(&m).unwrap()).unwrap();
     } else {
         out.save(output).unwrap_or_else(|e| fail(format!("cannot write {}: {e}", output.display())));
     }
-    println!("wrote {}", output.display());
+    if lambda_est.is_finite() {
+        println!("wrote {} (lambda_est={:.4})", output.display(), lambda_est);
+    } else {
+        println!("wrote {}", output.display());
+    }
 }
 
 fn is_image(p: &Path) -> bool {
@@ -129,7 +141,7 @@ fn main() {
         eprintln!("error: {e}");
         std::process::exit(2);
     });
-    let mode = InferMode::parse(&arg_value(&args, "--mode").unwrap_or_else(|| "fisheye".into())).unwrap_or_else(|e| {
+    let mode = InferMode::parse(&arg_value(&args, "--mode").unwrap_or_else(|| "auto".into())).unwrap_or_else(|e| {
         eprintln!("error: {e}");
         std::process::exit(2);
     });

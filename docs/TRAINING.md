@@ -1,8 +1,24 @@
 # 训练文档（Python 专用；推理全部在 Rust）
 
-> 对应论文 arXiv:2512.18718。目标：在 8G -ish 显卡上复现 four-by-one，再考虑 four-in-one。
-> 本目录只管训练出权重；**一切推理（含基线/评测/部署）都走 `crates/infer` + `crates/cli`**，
-> 训练产物经 `scripts/export_onnx.py` 导出给 Rust 加载。
+> 两条训练线：
+> - **AutoLambda（已训好，权重进仓）**：单图盲估计除法模型 λ，小 CNN + 合成结构光数据，
+>   Rust 用 tract 真实加载推理。见 §0。
+> - **UniRect-lite（论文复现线）**：对应论文 arXiv:2512.18718，见 §1–§5。
+
+## 0. AutoLambda（真实可用，默认推理路径）
+
+```powershell
+python scripts/train_autolambda.py --epochs 30 --train-n 4000 --device cpu --multiscale
+# 产物：checkpoints/autolambda/best.pt + weights/autolambda.onnx（~400KB，进仓）
+python scripts/eval_auto.py --trials 30   # 真实 Rust CLI 精度评估
+```
+
+- 任务：盲回归 λ∈[0, 0.6]（Li et al. 2019 一脉的发表任务类型），~150k 参数 CNN，输入 128 灰度图。
+- 数据：自包含合成（直线/网格/圆/棋盘格 + smooth 背景 + 噪声），`--multiscale` 在随机原生尺寸
+  畸变后再 resize 到 128——**必须开**，否则 serving 路径（大图→缩略图）会有 train/serve skew
+  （实测 CLI 侧 MAE 0.0838→**0.0147**）。
+- 实测：CLI 6 点 sweep MAE **0.0147**；30 trial 端到端 PSNR 13.17dB（合成数据 oracle 上限 13.31dB，已打满）。
+- Rust 侧 `crates/infer/src/onnx.rs` 用 tract 加载，`--mode auto`（默认）全分辨率重采样。
 
 ## 1. 数据
 

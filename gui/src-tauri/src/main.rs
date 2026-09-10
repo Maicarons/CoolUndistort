@@ -49,9 +49,25 @@ fn undistort_image(
     Ok(base64::engine::general_purpose::STANDARD.encode(buf.into_inner()))
 }
 
+/// Auto mode with the estimated lambda reported: {image, lambda}.
+#[tauri::command]
+fn undistort_auto(image_bytes: Vec<u8>, onnx_path: Option<String>) -> Result<serde_json::Value, String> {
+    let img = image::load_from_memory(&image_bytes)
+        .map_err(|e| format!("bad image: {e}"))?
+        .to_rgb8();
+    let (out, lambda) =
+        coolundistort_infer::onnx::run_auto(&img, onnx_path.as_deref()).map_err(|e| e.to_string())?;
+    let mut buf = Cursor::new(Vec::new());
+    out.write_to(&mut buf, ImageFormat::Png).map_err(|e| format!("encode: {e}"))?;
+    Ok(serde_json::json!({
+        "image": base64::engine::general_purpose::STANDARD.encode(buf.into_inner()),
+        "lambda": lambda,
+    }))
+}
+
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![undistort_image])
+        .invoke_handler(tauri::generate_handler![undistort_image, undistort_auto])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

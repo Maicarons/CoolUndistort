@@ -18,7 +18,8 @@
           <option value="t4">T4 旋转校正</option>
         </select>
         <select id="mode">
-          <option value="fisheye" selected>除法模型基线</option>
+          <option value="auto" selected>自动盲估计（内置权重）</option>
+          <option value="fisheye">除法模型（手动 λ）</option>
           <option value="tps">RP-TPS</option>
           <option value="checkpoint">UniRect-lite 权重</option>
         </select>
@@ -37,7 +38,7 @@
           <summary>TPS / 权重（P1）</summary>
           <label>deltas.json <input id="deltas" type="file" accept=".json" /></label>
           <label>grid <input id="grid" value="10x12" /></label>
-          <label>model.onnx 路径 <input id="onnx" placeholder="weights/unirect_lite_t3.onnx" /></label>
+          <label>model.onnx 路径 <input id="onnx" placeholder="weights/autolambda.onnx（默认内置）" /></label>
         </details>
       </section>
       <section class="compare">

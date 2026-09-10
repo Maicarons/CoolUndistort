@@ -12,7 +12,9 @@ data/processed/
 checkpoints/
 runs/
 results/
-weights/
+weights/*
+!weights/*.onnx
+!weights/.gitkeep
 # Node / Tauri / Rust
 node_modules/
 /target/
