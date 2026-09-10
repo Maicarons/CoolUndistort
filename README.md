@@ -1,12 +1,18 @@
 # CoolUndistort
 
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](./LICENSE)
+[![Release](https://img.shields.io/github/v/release/Maicarons/CoolUndistort)](https://github.com/Maicarons/CoolUndistort/releases)
+[![CI](https://github.com/Maicarons/CoolUndistort/actions/workflows/ci.yml/badge.svg)](https://github.com/Maicarons/CoolUndistort/actions/workflows/ci.yml)
+[![Docs](https://github.com/Maicarons/CoolUndistort/actions/workflows/docs.yml/badge.svg)](https://maicarons.github.io/CoolUndistort/)
+
 统一图像去畸变与矩形整形：**推理全部 Rust** + Python 仅做训练，配套 Tauri 桌面 GUI。
 
-- 研究背景见 [UNDISTORT_RESEARCH_REPORT.md](./UNDISTORT_RESEARCH_REPORT.md)
+- 📘 在线文档（VitePress）：<https://maicarons.github.io/CoolUndistort/>
+- 研究背景见 [docs/research.md](./docs/research.md)
 - 开发流程见 [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)
 - 训练见 [docs/TRAINING.md](./docs/TRAINING.md)，GUI 见 [docs/GUI.md](./docs/GUI.md)
 
-## 功能（v1.1 真实可用）
+## 功能（v1.2）
 
 - **自动盲去畸变（默认）**：`--mode auto` 单图盲估计除法模型 λ（内置 `weights/autolambda.onnx`，
   tract 纯 Rust 加载），CLI 侧 6 点 sweep MAE **0.0147**，开箱即用，无需标定。
@@ -16,7 +22,8 @@
   `--eval` 输出 PSNR+SSIM+lambda_est。
 - **Python 训练**：AutoLambda（`scripts/train_autolambda.py --multiscale`，合成结构光数据，
   多尺度训练消除 serving skew）+ UniRect-lite（RP-TPS + Loss + prompt 烘焙 + 断点续训 + ONNX 导出）。
-- **Tauri GUI**：默认 auto（显示估计 λ）、多选批量、前后对比滑块、标定面板、TPS/ONNX、保存结果。
+- **Tauri GUI**：Vue 3 + Element Plus「光学实验台」界面——默认 auto（显示估计 λ）、拖拽批量、
+  前后对比滑块、标定面板、TPS/ONNX、保存结果、关于页。
 - **标定**：`scripts/calibrate_opencv.py`（棋盘格 → calib.json）。
 
 ## 语言边界

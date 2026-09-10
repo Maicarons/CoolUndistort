@@ -21,6 +21,11 @@ test = ["pytest>=8.0"]
 [project.scripts]
 coolundistort-train = "coolundistort.train:main"
 
+[project.urls]
+Homepage = "https://maicarons.github.io/CoolUndistort/"
+Repository = "https://github.com/Maicarons/CoolUndistort"
+Issues = "https://github.com/Maicarons/CoolUndistort/issues"
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"

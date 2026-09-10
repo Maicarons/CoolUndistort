@@ -1,0 +1,99 @@
+/* CoolUndistort — "Optical Bench" design system (AGPL-3.0-or-later).
+   Dark graphite bench, amber safelight accent, cyan coating secondary. */
+:root {
+  --bg-0: #0b0d11;
+  --bg-1: #12151b;
+  --bg-2: #191d26;
+  --bg-3: #222735;
+  --line: #2b3140;
+  --line-soft: #232836;
+  --ink: #e9ecf4;
+  --ink-dim: #9aa1b4;
+  --ink-faint: #5d6478;
+  --amber: #ffb454;
+  --amber-deep: #d98f2b;
+  --cyan: #5ad7e0;
+  --good: #82d992;
+  --bad: #ff7a76;
+  --font-body: "Manrope", "PingFang SC", "Microsoft YaHei UI", sans-serif;
+  --font-mono: "IBM Plex Mono", "Cascadia Mono", monospace;
+  --radius: 10px;
+}
+
+html.dark {
+  --el-color-primary: var(--amber);
+  --el-color-primary-light-3: #ffc47a;
+  --el-color-primary-light-5: #ffd6a3;
+  --el-color-primary-light-7: #ffe6c9;
+  --el-color-primary-light-8: #ffedd8;
+  --el-color-primary-light-9: #fff5e9;
+  --el-color-primary-dark-2: var(--amber-deep);
+  --el-bg-color: var(--bg-2);
+  --el-bg-color-overlay: var(--bg-3);
+  --el-bg-color-page: var(--bg-0);
+  --el-fill-color-blank: var(--bg-2);
+  --el-fill-color: var(--bg-3);
+  --el-fill-color-light: var(--bg-2);
+  --el-border-color: var(--line);
+  --el-border-color-light: var(--line);
+  --el-border-color-lighter: var(--line-soft);
+  --el-text-color-primary: var(--ink);
+  --el-text-color-regular: var(--ink-dim);
+  --el-text-color-secondary: var(--ink-faint);
+}
+
+html, body, #app { height: 100%; margin: 0; }
+
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 700px at 85% -10%, rgba(90, 215, 224, 0.05), transparent 60%),
+    radial-gradient(900px 600px at -10% 110%, rgba(255, 180, 84, 0.06), transparent 55%),
+    var(--bg-0);
+  overflow: hidden;
+}
+
+/* Blueprint grid + grain atmosphere */
+#app::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(154, 161, 180, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(154, 161, 180, 0.045) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(ellipse 120% 90% at 50% 40%, black 30%, transparent 100%);
+}
+
+#app::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+.mono { font-family: var(--font-mono); }
+
+/* Staggered page-load reveal */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+.rise { animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.rise-1 { animation-delay: 0.05s; }
+.rise-2 { animation-delay: 0.14s; }
+.rise-3 { animation-delay: 0.23s; }
+.rise-4 { animation-delay: 0.32s; }
+
+@keyframes glowpulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 180, 84, 0.35); }
+  50% { box-shadow: 0 0 22px 2px rgba(255, 180, 84, 0.28); }
+}

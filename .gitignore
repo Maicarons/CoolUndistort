@@ -38,3 +38,7 @@ Thumbs.db
 .env
 *.log
 gui/src-tauri/gen/
+# VitePress
+docs/node_modules/
+docs/.vitepress/cache/
+docs/.vitepress/dist/

@@ -1,7 +1,7 @@
 # CoolUndistort 开发文档
 
 > 主文档。训练细节见 [TRAINING.md](./TRAINING.md)，GUI 见 [GUI.md](./GUI.md)，
-> 论文研究见 [/UNDISTORT_RESEARCH_REPORT.md](../UNDISTORT_RESEARCH_REPORT.md)。
+> 论文研究见 [research](./research.md)。
 
 ## 1. 项目目标与架构
 

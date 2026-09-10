@@ -1,11 +1,13 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "CoolUndistort",
-  "version": "0.1.0",
+  "version": "1.2.0",
   "identifier": "ai.commandcode.coolundistort",
   "build": {
     "devUrl": "http://localhost:1420",
-    "frontendDist": "../dist"
+    "frontendDist": "../dist",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
   },
   "app": {
     "windows": [{ "title": "CoolUndistort", "width": 1100, "height": 750 }],
