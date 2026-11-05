@@ -22,6 +22,8 @@ jobs:
       - run: pip install torch --index-url https://download.pytorch.org/whl/cpu
       - run: pip install opencv-python-headless numpy pytest pyyaml
       - run: pytest tests/ -q
+        env:
+          PYTHONPATH: ${{ github.workspace }}
   gui:
     runs-on: ubuntu-latest
     steps:
